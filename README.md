@@ -1,2 +1,2 @@
-# Pricing_american_options_with_DQN
+# Derivatives pricing
 Pricing American Options with Deep Q Learning
