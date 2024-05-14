@@ -6,11 +6,11 @@ import numpy as np
 class ReplyBuffer:
     def __init__(
         self,
-        max_size: int,
-        batch_size: int,
         state_shape: int,
         n_actions: int,
-        discrete: bool = False,
+        max_size: int = 10000,
+        batch_size: int = 128,
+        discrete: bool = True,
     ) -> None:
         self.mem_size = max_size
         self.mem_count = 0
@@ -23,7 +23,7 @@ class ReplyBuffer:
         self.terminal_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.batch_size = batch_size
 
-    def store_transition(self, state, action, reward, new_state, done) -> None:
+    def _store_transition(self, state, action, reward, new_state, done) -> None:
         index = self.mem_count % self.mem_size
         self.state_memory[index] = state
         self.new_state_memory[index] = new_state
@@ -38,7 +38,7 @@ class ReplyBuffer:
 
         self.mem_count += 1
 
-    def sample_buffer(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _sample_buffer(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         max_mem = min(self.mem_count, self.mem_size)
         batch = np.random.choice(max_mem, self.batch_size)
 

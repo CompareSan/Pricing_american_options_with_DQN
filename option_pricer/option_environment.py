@@ -1,6 +1,5 @@
 import copy
 import datetime as dt
-from collections import namedtuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +12,7 @@ class AttrDict(dict):
         self.__dict__ = self
 
 
-class OptionEnvironment:
+class OptionEnvironment: # Extend Option env to inherit from gym.Env base class. Then change main Option.
     def __init__(
         self,
         r: float,
@@ -67,7 +66,7 @@ class OptionEnvironment:
                 reward = np.maximum(0.0, (self.strike - price))
                 discounted_reward = np.exp(-self.r * t) * reward
                 done = True
-                print("Option exercised before expiration")  # should always be > 0 if the agent has learnt
+                print("Option exercised before expiration")  # should  be > 0 if the agent has learnt
                 return np.array((price, t)), reward, discounted_reward, done, {}
             else:
                 reward = 0.0
@@ -88,9 +87,6 @@ class OptionEnvironment:
         return np.array(self.state)
 
     def render(self):
-        plt.plot(
-            self.time_grid[: len(self.history_states)],
-            np.array(self.history_states)[:, 0], '-o'
-        )
+        plt.plot(self.time_grid[: len(self.history_states)], np.array(self.history_states)[:, 0], "-o")
 
         plt.show()

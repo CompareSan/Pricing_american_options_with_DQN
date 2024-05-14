@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class DQN(nn.Module):
+class Policy(nn.Module):
     def __init__(self, input_dims: int, n_actions: int) -> None:
-        super(DQN, self).__init__()
+        super().__init__()
         self.fc1 = nn.Linear(input_dims, 256)
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, n_actions)

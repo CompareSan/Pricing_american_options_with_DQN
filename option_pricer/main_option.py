@@ -1,16 +1,14 @@
-# import gym
 import datetime as dt
 
 import numpy as np
 import torch
-from neural_network import DQN
-from reply_buffer import ReplyBuffer
+from neural_network import Policy
 
-from option_pricer.agent import DQNAgent
+from option_pricer.agent import Agent, DQNAgent, ReinforceAgent
 from option_pricer.option_environment import OptionEnvironment
 
 
-def main(agent: DQNAgent, env: OptionEnvironment, n_episodes: int):
+def main(agent: Agent, n_episodes: int, model_name: str):
     scores = []
     discounted_scores = []
     eps = []
@@ -23,7 +21,7 @@ def main(agent: DQNAgent, env: OptionEnvironment, n_episodes: int):
         ind = 1
         while not done:
             action = agent.take_action(observation)
-            observation_, reward, discounted_reward, done, info = env.step(
+            observation_, reward, discounted_reward, done, _ = env.step(
                 action,
                 ind,
             )
@@ -49,7 +47,7 @@ def main(agent: DQNAgent, env: OptionEnvironment, n_episodes: int):
         print("episode: {}, score: {}".format(i, score))
         print(f"eps: {eps[-1]}")
         if len(discounted_scores) >= 1000:
-            print("Option price: {:.2f}".format(np.mean(discounted_scores[-100:])))
+            print("Option price: {:.2f}".format(np.mean(discounted_scores[-1000:])))
 
 
 if __name__ == "__main__":
@@ -58,7 +56,7 @@ if __name__ == "__main__":
     )
     start_date = dt.datetime(2020, 1, 1)
     maturity_date = dt.datetime(2020, 12, 1)
-
+    env_name = "Option-Pricer-v2"
     env = OptionEnvironment(
         r=0.06,
         sigma=0.1,
@@ -69,40 +67,24 @@ if __name__ == "__main__":
         freq="M",
     )
 
-    mem_size = 50000
-    batch_size = 128
-    replay_buffer = ReplyBuffer(
-        max_size=mem_size,
-        batch_size=batch_size,
-        state_shape=env.observation_space.shape[0],
-        n_actions=env.action_space.n,
-        discrete=True,
-    )
-
-    q_network = DQN(
+    policy_network = Policy(
         env.observation_space.shape[0],
         env.action_space.n,
     )
 
     alpha = 3e-4
     optimizer = torch.optim.AdamW(
-        q_network.parameters(),
+        policy_network.parameters(),
         lr=alpha,
         amsgrad=True,
     )
+    n_episodes = 40000
 
-    initial_epsilon = 1
-    final_epsilon = 0.01
-    epsilon_decay = (initial_epsilon - final_epsilon) / 50000
-    n_episodes = 20000
-    agent = DQNAgent(
+    agent = ReinforceAgent(
         env=env,
-        replay_buffer=replay_buffer,
-        q_network=q_network,
-        initial_epsilon=initial_epsilon,
-        epsilon_decay=epsilon_decay,
-        final_epsilon=final_epsilon,
+        policy_network=policy_network,
         optimizer=optimizer,
         device=device,
     )
-    main(agent=agent, env=env, n_episodes=n_episodes)
+
+    main(agent=agent, n_episodes=n_episodes, model_name=env_name)
