@@ -1,18 +1,13 @@
-import copy
 import datetime as dt
+from typing import Optional
 
+import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 
-class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-
-
-class OptionEnvironment: # Extend Option env to inherit from gym.Env base class. Then change main Option.
+class OptionEnvironment(gym.Env):
     def __init__(
         self,
         r: float,
@@ -23,6 +18,7 @@ class OptionEnvironment: # Extend Option env to inherit from gym.Env base class.
         maturity_date: dt.datetime,
         freq: str,
     ):
+        super(OptionEnvironment, self).__init__()
         self.r = r
         self.sigma = sigma
         self.strike = strike
@@ -39,43 +35,66 @@ class OptionEnvironment: # Extend Option env to inherit from gym.Env base class.
         ]  # Fractions of years for discount
 
         self.state = self.initial_price, self.fraction_list[0]
-        self._observation_space = np.array(copy.deepcopy(self.state))
-        self._action_space = AttrDict()
-        self._action_space.update({"n": 2})
         self.history_states = [self.state]
 
-    @property
-    def action_space(self):
-        return self._action_space
+        self.action_space = gym.spaces.Discrete(
+            2
+        )  # 2 discrete actions: exercise or hold
+        self.observation_space = gym.spaces.Box(
+            low=0, high=np.inf, shape=(2,), dtype=np.float32
+        )  # price and time fraction
 
-    @property
-    def observation_space(self):
-        return self._observation_space
-
-    def step(self, action, ind):
+    def step(self, action):
         price, t = self.state
+        ind = self.fraction_list.index(t)
         if self.isterminal(t):
             reward = np.maximum(0.0, (self.strike - price))
             discounted_reward = np.exp(-self.r * t) * reward
             done = True
             print("Option at maturity")
-            return np.array((price, t)), reward, discounted_reward, done, {}
+            return (
+                np.array((price, t), dtype=np.float32),
+                discounted_reward,
+                done,
+                False,
+                None,
+            )
         else:
-
             if action == 1:  # exercise the option
                 reward = np.maximum(0.0, (self.strike - price))
                 discounted_reward = np.exp(-self.r * t) * reward
                 done = True
-                print("Option exercised before expiration")  # should  be > 0 if the agent has learnt
-                return np.array((price, t)), reward, discounted_reward, done, {}
+                print(
+                    "Option exercised before expiration"
+                )  # should be > 0 if the agent has learnt
+                return (
+                    np.array((price, t), dtype=np.float32),
+                    discounted_reward,
+                    done,
+                    False,
+                    None,
+                )
             else:
                 reward = 0.0
                 done = False
-                dt = self.fraction_list[ind] - t
+                dt = self.fraction_list[ind + 1] - t
                 eps = np.random.normal(0, 1)
-                self.state = price * np.exp((self.r - self.sigma**2 / 2) * dt + self.sigma * np.sqrt(dt) * eps), t + dt
+                self.state = (
+                    price
+                    * np.exp(
+                        (self.r - self.sigma**2 / 2) * dt
+                        + self.sigma * np.sqrt(dt) * eps
+                    ),
+                    self.fraction_list[ind + 1],
+                )
                 self.history_states.append(self.state)
-                return np.array(self.state), reward, reward, done, {}
+                return (
+                    np.array(self.state, dtype=np.float32),
+                    reward,
+                    done,
+                    False,
+                    None,
+                )
 
     def isterminal(self, t):
         if t == self.fraction_list[-1]:
@@ -84,9 +103,15 @@ class OptionEnvironment: # Extend Option env to inherit from gym.Env base class.
     def reset(self):
         self.state = self.initial_price, self.fraction_list[0]
         self.history_states = [self.state]
-        return np.array(self.state)
+        return np.array(self.state, dtype=np.float32), None
 
-    def render(self):
-        plt.plot(self.time_grid[: len(self.history_states)], np.array(self.history_states)[:, 0], "-o")
-
+    def render(self, mode: Optional[str] = None):
+        plt.plot(
+            self.time_grid[: len(self.history_states)],
+            np.array(self.history_states)[:, 0],
+            "-o",
+        )
+        plt.xlabel("Time")
+        plt.ylabel("Price")
+        plt.title("Option Price Evolution")
         plt.show()

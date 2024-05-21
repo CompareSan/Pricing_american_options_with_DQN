@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from option_pricer.neural_network import Policy
-from option_pricer.option_environment import OptionEnvironment
 from option_pricer.reply_buffer import ReplyBuffer
 
 
@@ -43,8 +42,8 @@ class DQNAgent:
         self.action_space = [i for i in range(self.env.action_space.n)]
 
         self.memory = ReplyBuffer(
-        state_shape=self.env.observation_space.shape[0],
-        n_actions=self.env.action_space.n,
+            state_shape=self.env.observation_space.shape[0],
+            n_actions=self.env.action_space.n,
         )
 
         self.device = device
@@ -126,10 +125,12 @@ class DQNAgent:
             scores.append(score)
 
             print("episode: {}, score: {}".format(i, score))
-            print(self.epsilon)
+            if len(scores) >= 1000:
+                print(f"Final Score (Option Price): {np.mean(scores[-1000:])}")
 
     def save_model(self, path: str) -> None:
         torch.save(self.policy_network.state_dict(), path)
+
 
 class ReinforceAgent:
     def __init__(
@@ -221,6 +222,8 @@ class ReinforceAgent:
             scores.append(cum_reward)
 
             print("episode: {}, score: {}".format(i, cum_reward))
+            if len(scores) >= 1000:
+                print(f"Final Score (Option Price): {np.mean(scores[-1000:])}")
 
     def save_model(self, path: str) -> None:
         torch.save(self.policy_network.state_dict(), path)

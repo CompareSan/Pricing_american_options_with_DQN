@@ -30,11 +30,11 @@ if __name__ == "__main__":
     )
     n_episodes = 400
 
-    agent = ReinforceAgent(
+    agent = DQNAgent(
         env=env,
         policy_network=policy_network,
         optimizer=optimizer,
         device=device,
-    )
+    ) # Change to DQNAgent for DQN
 
     main(agent=agent, n_episodes=n_episodes, model_name=env_name)
